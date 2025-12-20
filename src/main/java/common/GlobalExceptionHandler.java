@@ -20,13 +20,6 @@ public class GlobalExceptionHandler {
         log.error("系统异常: ", ex);
         return Result.error("系统繁忙，请稍后再试");
     }
-    // 定义业务异常类
-    class BusinessException extends RuntimeException {
-        public BusinessException(String message) {
-            super(message);
-        }
-    }
 }
-
 
 
