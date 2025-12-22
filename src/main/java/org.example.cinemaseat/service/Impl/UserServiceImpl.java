@@ -1,7 +1,7 @@
 package org.example.cinemaseat.service.Impl;
 
 import org.example.cinemaseat.common.BusinessException;
-import org.example.cinemaseat.common.JwtUtil;
+import org.example.cinemaseat.common.Jwt.JwtUtil;
 import org.example.cinemaseat.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

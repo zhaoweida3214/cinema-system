@@ -9,7 +9,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebMvcConfig implements WebMvcConfigurer {
 
     @Autowired
-    private org.example.cinemaseat.common.JwtInterceptor jwtInterceptor;
+    private org.example.cinemaseat.common.Jwt.JwtInterceptor jwtInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
