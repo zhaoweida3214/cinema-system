@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.cinemaseat.mapper.OrderMapper">
+
+    <select id="selectUserOrders" parameterType="map" resultType="org.example.cinemaseat.pojo.VO.UserOrderVO">
+        SELECT o.id, o.schedule_id AS scheduleId, m.title AS movieTitle,
+               h.name AS hallName, sc.start_time AS startTime,
+               GROUP_CONCAT(CONCAT(se.row, '排', se.col, '座')) AS seatNumbers,
+               o.status, o.created_at AS createdAt
+        FROM `order` o
+                 JOIN schedule sc ON o.schedule_id = sc.id
+                 JOIN movie m ON sc.movie_id = m.id
+                 JOIN hall h ON sc.hall_id = h.id
+                 JOIN seat_status se ON se.order_id = o.id
+        WHERE o.user_id = #{userId}
+        GROUP BY o.id
+        ORDER BY o.created_at DESC
+    </select>
+
+</mapper>
