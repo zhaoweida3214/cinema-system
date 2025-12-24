@@ -22,7 +22,7 @@ public interface SeatStatusMapper {
     List<SeatStatus> selectByIds(@Param("seatIds") List<Long> seatIds);
     // 锁定座位
     @Update("<script>" +
-            "UPDATE seat_status SET status = #{status}, locked_until = #{expireTime}" + "WHERE id IN " +
+            "UPDATE seat_status SET status = #{status}, locked_until = #{expireTime} WHERE id IN " +
             "<foreach collection='seatIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>" +
             "</script>")
     void lockSeats(@Param("seatIds") List<Long> seatIds,
