@@ -26,6 +26,7 @@ public class OrderServiceImpl implements OrderService {
     private SeatStatusMapper seatStatusMapper;
     @Autowired
     private OrderMapper orderMapper;
+
     // 创建订单
     @Override
     public OrderCreateVO createOrder(OrderCreateDTO dto) {
@@ -41,17 +42,19 @@ public class OrderServiceImpl implements OrderService {
         if (!unavailable.isEmpty()) {
             throw new BusinessException("以下座位不可用: " + unavailable);
         }
-        // 2. 锁定座位（更新状态为 LOCKED，设置过期时间）
-        LocalDateTime expireTime = LocalDateTime.now().plusMinutes(15);
-        seatStatusMapper.lockSeats(seatIds, "LOCKED", expireTime);
-        // 3. 创建订单（状态 PENDING）
+        // 2. 创建订单（状态 PENDING）
         Order order = new Order();
         order.setUserId(userId);
         order.setScheduleId(scheduleId);
         order.setStatus("PENDING");
         order.setCreatedAt(LocalDateTime.now());
-        order.setExpiresAt(expireTime);
+        order.setExpiresAt(LocalDateTime.now().plusMinutes(15));
         orderMapper.insert(order);
+
+        // 3. 锁定座位（更新状态为 LOCKED，设置过期时间，并关联订单ID）
+        LocalDateTime expireTime = LocalDateTime.now().plusMinutes(15);
+        seatStatusMapper.lockSeats(seatIds, "LOCKED", expireTime, order.getId());
+
         // 4. 返回结果
         return OrderCreateVO.builder()
                 .orderId(order.getId())
@@ -59,6 +62,7 @@ public class OrderServiceImpl implements OrderService {
                 .lockedSeats(seatIds)
                 .build();
     }
+
     // 支付订单
     @Override
     @Transactional
@@ -67,11 +71,12 @@ public class OrderServiceImpl implements OrderService {
         if (!"PENDING".equals(order.getStatus())) {
             throw new BusinessException("订单不可支付");
         }
-    // 更新订单状态
+        // 更新订单状态为 PAID
         orderMapper.updateStatus(orderId, "PAID");
-    // 座位状态改为 SOLD
+        // 座位状态改为 SOLD
         seatStatusMapper.updateStatusByOrderId(orderId, "SOLD");
     }
+
     // 查询用户订单列表
     @Override
     public List<UserOrderVO> listUserOrders(Long userId) {
