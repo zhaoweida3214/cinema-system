@@ -20,14 +20,17 @@ public interface SeatStatusMapper {
             "<foreach collection='seatIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>" +
             "</script>")
     List<SeatStatus> selectByIds(@Param("seatIds") List<Long> seatIds);
+
     // 锁定座位
     @Update("<script>" +
-            "UPDATE seat_status SET status = #{status}, locked_until = #{expireTime} WHERE id IN " +
+            "UPDATE seat_status SET status = #{status}, locked_until = #{expireTime}, order_id = #{orderId} WHERE id IN " +
             "<foreach collection='seatIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>" +
             "</script>")
     void lockSeats(@Param("seatIds") List<Long> seatIds,
                    @Param("status") String status,
-                   @Param("expireTime") LocalDateTime expireTime);
+                   @Param("expireTime") LocalDateTime expireTime,
+                   @Param("orderId") Long orderId);
+
     // 更新座位状态
     @Update("UPDATE seat_status SET status = #{status} WHERE order_id = #{orderId}")
     void updateStatusByOrderId(@Param("orderId") Long orderId, @Param("status")
