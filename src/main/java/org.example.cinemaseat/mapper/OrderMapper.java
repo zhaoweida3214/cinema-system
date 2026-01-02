@@ -4,6 +4,7 @@ import org.apache.ibatis.annotations.*;
 import org.example.cinemaseat.pojo.VO.UserOrderVO;
 import org.example.cinemaseat.pojo.entity.Order;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
@@ -22,4 +23,8 @@ public interface OrderMapper {
     Order getById(Long orderId);
     // 查询用户订单列表
     List<UserOrderVO> selectUserOrders(@Param("userId") Long userId);
+    // 在OrderMapper.java中添加以下方法
+    @Select("SELECT * FROM orders WHERE status = 'PENDING' AND expires_at < #{now}")
+    List<Order> selectExpiredOrders(@Param("now") LocalDateTime now);
+
 }

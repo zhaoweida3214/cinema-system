@@ -35,4 +35,8 @@ public interface SeatStatusMapper {
     @Update("UPDATE seat_status SET status = #{status} WHERE order_id = #{orderId}")
     void updateStatusByOrderId(@Param("orderId") Long orderId, @Param("status")
     String status);
+    // 释放座位（将座位状态改为AVAILABLE，清除锁定信息和订单关联）
+    @Update("UPDATE seat_status SET status = 'AVAILABLE', locked_until = NULL, order_id = NULL WHERE order_id = #{orderId}")
+    void releaseSeatsByOrderId(@Param("orderId") Long orderId);
+
 }

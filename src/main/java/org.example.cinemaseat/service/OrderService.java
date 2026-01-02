@@ -13,4 +13,6 @@ public interface OrderService {
     void payOrder(Long orderId);
     // 查询用户订单列表
     List<UserOrderVO> listUserOrders(Long userId);
+    // 取消订单
+    void cancelOrder(Long orderId);
 }

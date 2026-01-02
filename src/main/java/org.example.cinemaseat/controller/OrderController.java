@@ -35,5 +35,11 @@ public class OrderController {
         List<UserOrderVO> orders = orderService.listUserOrders(userId);
         return Result.success(orders);
     }
+    // 取消订单
+    @PutMapping("/{orderId}/cancel")
+    public Result<Void> cancelOrder(@PathVariable Long orderId) {
+        orderService.cancelOrder(orderId);
+        return Result.success();
+    }
 
 }
