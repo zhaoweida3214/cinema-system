@@ -82,4 +82,25 @@ public class OrderServiceImpl implements OrderService {
     public List<UserOrderVO> listUserOrders(Long userId) {
         return orderMapper.selectUserOrders(userId);
     }
+    // 取消订单
+    @Override
+    @Transactional
+    public void cancelOrder(Long orderId) {
+        // 1. 获取订单信息
+        Order order = orderMapper.getById(orderId);
+
+        // 2. 检查订单是否存在且状态为PENDING
+        if (order == null) {
+            throw new BusinessException("订单不存在");
+        }
+        if (!"PENDING".equals(order.getStatus()) && !"PAID".equals(order.getStatus())) {
+            throw new BusinessException("订单不可取消");
+        }
+
+        // 3. 更新订单状态为CANCELLED
+        orderMapper.updateStatus(orderId, "CANCELLED");
+
+        // 4. 释放锁定的座位（将座位状态改为AVAILABLE，清除锁定信息和订单关联）
+        seatStatusMapper.releaseSeatsByOrderId(orderId);
+    }
 }
