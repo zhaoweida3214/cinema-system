@@ -33,8 +33,9 @@ public class OrderServiceImpl implements OrderService {
         Long userId = BaseContext.getCurrentUserId(); // 从 JWT 解析
         Long scheduleId = dto.getScheduleId();
         List<Long> seatIds = dto.getSeatIds();
+
         // 1. 检查座位是否可锁定（状态为 AVAILABLE）
-        List<SeatStatus> currentSeats = seatStatusMapper.selectByIds(seatIds);
+        List<SeatStatus> currentSeats = seatStatusMapper.selectByIdsForUpdate(seatIds);
         List<Long> unavailable = currentSeats.stream()
                 .filter(s -> !"AVAILABLE".equals(s.getStatus()))
                 .map(SeatStatus::getId)
@@ -42,20 +43,26 @@ public class OrderServiceImpl implements OrderService {
         if (!unavailable.isEmpty()) {
             throw new BusinessException("以下座位不可用: " + unavailable);
         }
-        // 2. 创建订单（状态 PENDING）
+
+        // 2. 计算订单总金额
+        List<Double> seatprices = seatStatusMapper.getPricesByIds(seatIds);
+        double totalPrice = seatprices.stream().mapToDouble(Double::doubleValue).sum();
+
+        // 3. 创建订单（状态 PENDING）
         Order order = new Order();
         order.setUserId(userId);
         order.setScheduleId(scheduleId);
         order.setStatus("PENDING");
         order.setCreatedAt(LocalDateTime.now());
         order.setExpiresAt(LocalDateTime.now().plusMinutes(15));
+        order.setTotalAmount(totalPrice);
         orderMapper.insert(order);
 
-        // 3. 锁定座位（更新状态为 LOCKED，设置过期时间，并关联订单ID）
+        // 4. 锁定座位（更新状态为 LOCKED，设置过期时间，并关联订单ID）
         LocalDateTime expireTime = LocalDateTime.now().plusMinutes(15);
         seatStatusMapper.lockSeats(seatIds, "LOCKED", expireTime, order.getId());
 
-        // 4. 返回结果
+        // 5. 返回结果
         return OrderCreateVO.builder()
                 .orderId(order.getId())
                 .expiresAt(expireTime)
@@ -82,6 +89,7 @@ public class OrderServiceImpl implements OrderService {
     public List<UserOrderVO> listUserOrders(Long userId) {
         return orderMapper.selectUserOrders(userId);
     }
+
     // 取消订单
     @Override
     @Transactional

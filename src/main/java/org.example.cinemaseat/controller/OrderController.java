@@ -16,25 +16,21 @@ import java.util.List;
 public class OrderController {
     @Autowired
     private OrderService orderService;
+
     // 创建订单
     @PostMapping
     public Result<OrderCreateVO> createOrder(@RequestBody OrderCreateDTO dto) {
         OrderCreateVO vo = orderService.createOrder(dto);
         return Result.success(vo);
     }
+
     //模拟支付订单
     @PutMapping("/{orderId}/pay")
     public Result<Void> payOrder(@PathVariable Long orderId) {
         orderService.payOrder(orderId);
         return Result.success();
     }
-    //查询用户当前订单列表
-    @GetMapping
-    public Result<List<UserOrderVO>> listUserOrders() {
-        Long userId = BaseContext.getCurrentUserId();
-        List<UserOrderVO> orders = orderService.listUserOrders(userId);
-        return Result.success(orders);
-    }
+
     // 取消订单
     @PutMapping("/{orderId}/cancel")
     public Result<Void> cancelOrder(@PathVariable Long orderId) {
@@ -42,4 +38,11 @@ public class OrderController {
         return Result.success();
     }
 
+    //查询用户当前订单列表
+    @GetMapping
+    public Result<List<UserOrderVO>> listUserOrders() {
+        Long userId = BaseContext.getCurrentUserId();
+        List<UserOrderVO> orders = orderService.listUserOrders(userId);
+        return Result.success(orders);
+    }
 }
