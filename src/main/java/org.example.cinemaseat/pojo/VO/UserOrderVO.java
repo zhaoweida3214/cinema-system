@@ -15,6 +15,7 @@ public class UserOrderVO {
     private LocalDateTime startTime;
     private String seatNumbers; // 如 ["1排1座", "1排3座"]
     private String status;
+    private Double totalAmount; // 订单总金额
     private LocalDateTime createdAt;
 }
 
