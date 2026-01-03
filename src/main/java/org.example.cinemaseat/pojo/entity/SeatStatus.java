@@ -11,6 +11,7 @@ public class SeatStatus {
     private Integer col;
     private String status; // AVAILABLE / LOCKED / SOLD
     private String type;   // NORMAL / VIP
+    private Double price;  // 座位价格
     private Long orderId;  // 关联订单ID（可为空）
     private LocalDateTime lockedUntil; // 锁定过期时间
 }

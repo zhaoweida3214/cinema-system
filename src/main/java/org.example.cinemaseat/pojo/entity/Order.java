@@ -9,6 +9,7 @@ public class Order {
     private Long userId;
     private Long scheduleId;
     private String status; // PENDING / PAID / CANCELLED
+    private Double totalAmount; // 订单总金额
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
 }
