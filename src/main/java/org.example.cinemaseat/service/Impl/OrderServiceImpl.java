@@ -8,10 +8,12 @@ import org.example.cinemaseat.common.config.DistributedLockUtil;
 import org.example.cinemaseat.mapper.OrderMapper;
 import org.example.cinemaseat.mapper.SeatStatusMapper;
 import org.example.cinemaseat.pojo.DTO.OrderCreateDTO;
+import org.example.cinemaseat.pojo.DTO.OrderMessageDTO;
 import org.example.cinemaseat.pojo.VO.OrderCreateVO;
 import org.example.cinemaseat.pojo.VO.UserOrderVO;
 import org.example.cinemaseat.pojo.entity.SeatStatus;
 import org.example.cinemaseat.pojo.entity.Order;
+import org.example.cinemaseat.service.MessageService;
 import org.example.cinemaseat.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,9 @@ public class OrderServiceImpl implements OrderService {
     
     @Autowired
     private DistributedLockUtil distributedLockUtil;
+    
+    @Autowired
+    private MessageService messageService;
     
     // 缓存配置常量
     private static final String ORDER_CACHE = "order_cache";
@@ -94,7 +99,10 @@ public class OrderServiceImpl implements OrderService {
                 
             log.info("【订单创建成功】orderId={}, scheduleId={}", order.getId(), scheduleId);
                 
-            // 6. 返回结果
+            // 6. 异步发送消息（短信通知、积分变动、延迟取消）
+            sendOrderMessages(order);
+                
+            // 7. 返回结果
             return OrderCreateVO.builder()
                     .orderId(order.getId())
                     .expiresAt(expireTime)
@@ -124,6 +132,9 @@ public class OrderServiceImpl implements OrderService {
         clearSeatLayoutCache(order.getScheduleId());
         
         log.info("【订单支付成功】orderId={}", orderId);
+        
+        // 异步发送积分消息和短信通知
+        sendPaymentSuccessMessages(order);
     }
 
     // 查询用户订单列表
@@ -171,5 +182,71 @@ public class OrderServiceImpl implements OrderService {
         // 延迟双删：立即删除 + 延迟删除
         cacheManager.delayedEvict(SEAT_LAYOUT_CACHE, cacheKey, 500);
         log.debug("【清理座位缓存】scheduleId={}", scheduleId);
+    }
+    
+    /**
+     * 发送订单相关消息（异步化）
+     * 
+     * @param order 订单信息
+     */
+    private void sendOrderMessages(Order order) {
+        try {
+            // 构建消息对象
+            OrderMessageDTO message = OrderMessageDTO.builder()
+                    .orderId(order.getId())
+                    .userId(order.getUserId())
+                    .scheduleId(order.getScheduleId())
+                    .totalAmount(order.getTotalAmount())
+                    .messageType("ORDER_CREATED")
+                    .content("您已成功选座，请在 15 分钟内完成支付")
+                    .build();
+            
+            // 发送延迟取消消息（15 分钟后检查订单是否支付）
+            messageService.sendDelayMessage(message);
+            
+            log.info("【订单消息已发送】orderId={}", order.getId());
+        } catch (Exception e) {
+            log.error("【订单消息发送失败】orderId={}, error={}", order.getId(), e.getMessage());
+            // 消息发送失败不影响主流程，记录日志即可
+        }
+    }
+    
+    /**
+     * 发送支付成功后的消息（异步化）
+     * 
+     * @param order 订单信息
+     */
+    private void sendPaymentSuccessMessages(Order order) {
+        try {
+            // 计算积分（假设 1 元=10 积分）
+            Integer points = (int) (order.getTotalAmount() * 10);
+            
+            // 构建短信消息
+            OrderMessageDTO smsMessage = OrderMessageDTO.builder()
+                    .orderId(order.getId())
+                    .userId(order.getUserId())
+                    .phoneNumber("138****1234") // TODO: 从用户表获取真实手机号
+                    .content("您的电影票已出票成功！订单号：" + order.getId() + "，金额：￥" + order.getTotalAmount())
+                    .messageType("SMS")
+                    .build();
+            
+            // 构建积分消息
+            OrderMessageDTO pointsMessage = OrderMessageDTO.builder()
+                    .orderId(order.getId())
+                    .userId(order.getUserId())
+                    .points(points)
+                    .content("订单支付成功，获得" + points + "积分")
+                    .messageType("POINTS")
+                    .build();
+            
+            // 异步发送消息
+            messageService.sendSmsMessage(smsMessage);
+            messageService.sendPointsMessage(pointsMessage);
+            
+            log.info("【支付成功消息已发送】orderId={}, points={}", order.getId(), points);
+        } catch (Exception e) {
+            log.error("【支付成功消息发送失败】orderId={}, error={}", order.getId(), e.getMessage());
+            // 消息发送失败不影响主流程
+        }
     }
 }

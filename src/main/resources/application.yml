@@ -52,3 +52,49 @@ distributed-lock:
   lease-time: 30
   # 重试间隔（毫秒）
   retry-interval: 100
+
+# RabbitMQ 配置
+spring:
+  rabbitmq:
+    host: ${sky.rabbitmq.host:localhost}
+    port: ${sky.rabbitmq.port:5672}
+    username: ${sky.rabbitmq.username:guest}
+    password: ${sky.rabbitmq.password:guest}
+    virtual-host: ${sky.rabbitmq.virtual-host:/}
+    # 生产者确认机制
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    # 消费者手动 ACK
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 10
+        retry:
+          enabled: true
+          initial-interval: 1000ms
+          max-attempts: 3
+          max-interval: 10000ms
+
+# 消息队列配置
+mq:
+  exchange:
+    # 订单交换机
+    order: order.exchange
+    # 直连交换机
+    direct: order.direct.exchange
+  queue:
+    # 短信队列
+    sms: order.sms.queue
+    # 积分队列
+    points: order.points.queue
+    # 延迟队列（订单超时取消）
+    delay: order.delay.queue
+  routing-key:
+    # 短信路由键
+    sms: order.sms
+    # 积分路由键
+    points: order.points
+    # 延迟路由键
+    delay: order.delay
+  # 消息 TTL（15 分钟订单超时）
+  message-ttl: 900000
