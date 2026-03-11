@@ -13,9 +13,42 @@ spring:
     password: 1234
 
 mybatis:
-  #mapper配置文件
+  #mapper 配置文件
   mapper-locations: classpath:mapper/*.xml
   type-aliases-package: org.example.cinemaseat.pojo
   configuration:
     #开启驼峰命名
     map-underscore-to-camel-case: true
+
+# Redis 配置
+redis:
+  host: ${sky.redis.host:localhost}
+  port: ${sky.redis.port:6379}
+  password: ${sky.redis.password:}
+  database: ${sky.redis.database:0}
+  timeout: 10000ms
+  lettuce:
+    pool:
+      max-active: 100
+      max-idle: 50
+      min-idle: 10
+      max-wait: 3000ms
+
+# Caffeine 缓存配置
+cache:
+  caffeine:
+    # 最大缓存数量
+    max-size: 10000
+    # 缓存过期时间（秒）
+    expire-after-write: 300
+    # 缓存加载时间（秒）
+    refresh-after-write: 180
+
+# 分布式锁配置
+distributed-lock:
+  # 等待锁的时间（秒）
+  wait-time: 5
+  # 锁持有时间（秒）
+  lease-time: 30
+  # 重试间隔（毫秒）
+  retry-interval: 100

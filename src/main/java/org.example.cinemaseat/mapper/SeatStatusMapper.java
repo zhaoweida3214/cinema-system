@@ -10,17 +10,24 @@ import java.util.List;
 
 @Mapper
 public interface SeatStatusMapper {
-    // 根据排期ID查询座位状态
+    // 根据排期 ID 查询座位状态
     @Select("SELECT * FROM seat_status WHERE schedule_id = #{scheduleId}")
     List<SeatStatus> getByScheduleId(Long scheduleId);
 
-    // 根据座位ID查询座位状态（使用悲观锁）
+    // 根据座位 ID 查询座位状态（使用悲观锁）- 用于无分布式锁场景
     @Select("<script>" +
             "SELECT * FROM seat_status WHERE id IN " +
             "<foreach collection='seatIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>" +
             " FOR UPDATE" +
             "</script>")
     List<SeatStatus> selectByIdsForUpdate(@Param("seatIds") List<Long> seatIds);
+    
+    // 根据座位 ID 查询座位状态（不使用锁）- 用于有分布式锁场景
+    @Select("<script>" +
+            "SELECT * FROM seat_status WHERE id IN " +
+            "<foreach collection='seatIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>" +
+            "</script>")
+    List<SeatStatus> selectByIds(@Param("seatIds") List<Long> seatIds);
 
     // 锁定座位
     @Update("<script>" +
