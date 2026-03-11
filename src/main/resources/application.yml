@@ -82,6 +82,8 @@ mq:
     order: order.exchange
     # 直连交换机
     direct: order.direct.exchange
+    # 死信交换机
+    dlx: order.dlx.exchange
   queue:
     # 短信队列
     sms: order.sms.queue
@@ -89,6 +91,8 @@ mq:
     points: order.points.queue
     # 延迟队列（订单超时取消）
     delay: order.delay.queue
+    # 死信队列（处理失败超过 3 次的消息）
+    dead-letter: order.dead.letter.queue
   routing-key:
     # 短信路由键
     sms: order.sms
@@ -96,5 +100,7 @@ mq:
     points: order.points
     # 延迟路由键
     delay: order.delay
+    # 死信路由键
+    dead-letter: order.dead.letter
   # 消息 TTL（15 分钟订单超时）
   message-ttl: 900000

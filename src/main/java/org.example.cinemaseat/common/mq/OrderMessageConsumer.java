@@ -59,16 +59,18 @@ public class OrderMessageConsumer {
         } catch (IOException e) {
             log.error("【短信消息处理失败】orderId={}, error={}", message.getOrderId(), e.getMessage());
             try {
-                // 拒绝消息并重新入队（会触发重试机制）
+                // 拒绝消息并重新入队（会触发 Spring 重试机制）
+                // Spring 会在重试 3 次后自动停止，消息进入死信队列
                 channel.basicNack(deliveryTag, false, true);
             } catch (IOException ex) {
                 log.error("【消息 NACK 失败】orderId={}, error={}", message.getOrderId(), ex.getMessage());
             }
         } catch (Exception e) {
-            log.error("【短信发送异常】orderId={}, error={}", message.getOrderId(), e.getMessage());
+            log.error("【短信发送异常 - 业务异常不重试】orderId={}, error={}", message.getOrderId(), e.getMessage());
             try {
-                // 业务异常，确认消息（避免死循环）
+                // 业务异常（如手机号错误），直接确认，避免死循环
                 channel.basicAck(deliveryTag, false);
+                // TODO: 记录到数据库，后续人工介入处理
             } catch (IOException ex) {
                 log.error("【消息 ACK 失败】orderId={}, error={}", message.getOrderId(), ex.getMessage());
             }
@@ -103,14 +105,17 @@ public class OrderMessageConsumer {
         } catch (IOException e) {
             log.error("【积分消息处理失败】orderId={}, error={}", message.getOrderId(), e.getMessage());
             try {
+                // 拒绝消息并重新入队（会触发 Spring 重试机制）
                 channel.basicNack(deliveryTag, false, true);
             } catch (IOException ex) {
                 log.error("【消息 NACK 失败】orderId={}, error={}", message.getOrderId(), ex.getMessage());
             }
         } catch (Exception e) {
-            log.error("【积分增加异常】orderId={}, error={}", message.getOrderId(), e.getMessage());
+            log.error("【积分增加异常 - 业务异常不重试】orderId={}, error={}", message.getOrderId(), e.getMessage());
             try {
+                // 业务异常，直接确认
                 channel.basicAck(deliveryTag, false);
+                // TODO: 记录到数据库，后续人工介入处理
             } catch (IOException ex) {
                 log.error("【消息 ACK 失败】orderId={}, error={}", message.getOrderId(), ex.getMessage());
             }
@@ -202,5 +207,60 @@ public class OrderMessageConsumer {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+    
+    /**
+     * 死信队列消费者 - 处理重试超过 3 次仍然失败的消息
+     * 这类消息需要人工介入处理
+     */
+    @RabbitListener(queuesToDeclare = @Queue(value = "${mq.queue.dead-letter}", durable = "true"))
+    public void consumeDeadLetterMessage(OrderMessageDTO message, Channel channel, long deliveryTag) {
+        log.error("【收到死信消息】orderId={}, messageType={}, 需要人工介入！", 
+                message.getOrderId(), message.getMessageType());
+        
+        try {
+            // 1. 记录到数据库（失败消息表）
+            saveFailedMessage(message);
+            
+            // 2. 发送告警通知（邮件、钉钉等）
+            sendAlertNotification(message);
+            
+            // 3. 手动 ACK（已记录，可以确认）
+            channel.basicAck(deliveryTag, false);
+            
+            log.info("【死信消息已记录】orderId={}, 等待人工处理", message.getOrderId());
+            
+        } catch (IOException e) {
+            log.error("【死信消息处理失败】orderId={}, error={}", message.getOrderId(), e.getMessage());
+            // 死信队列不再重试，直接丢弃
+            try {
+                channel.basicNack(deliveryTag, false, false);
+            } catch (IOException ex) {
+                log.error("【死信消息 NACK 失败】orderId={}, error={}", message.getOrderId(), ex.getMessage());
+            }
+        } catch (Exception e) {
+            log.error("【死信消息处理异常】orderId={}, error={}", message.getOrderId(), e.getMessage());
+            try {
+                channel.basicAck(deliveryTag, false);
+            } catch (IOException ex) {
+                log.error("【死信消息 ACK 失败】orderId={}, error={}", message.getOrderId(), ex.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * 保存失败消息到数据库
+     */
+    private void saveFailedMessage(OrderMessageDTO message) {
+        // TODO: 实现失败消息持久化
+        log.warn("【持久化失败消息】orderId={}, content={}", message.getOrderId(), message.getContent());
+    }
+    
+    /**
+     * 发送告警通知
+     */
+    private void sendAlertNotification(OrderMessageDTO message) {
+        // TODO: 发送邮件、钉钉、企业微信等告警
+        log.warn("【发送告警】订单{}的消息处理失败，请人工介入", message.getOrderId());
     }
 }

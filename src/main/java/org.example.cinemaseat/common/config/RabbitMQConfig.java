@@ -21,6 +21,9 @@ public class RabbitMQConfig {
 
     @Value("${mq.exchange.direct}")
     private String directExchange;
+    
+    @Value("${mq.exchange.dlx}")
+    private String dlxExchange;
 
     @Value("${mq.queue.sms}")
     private String smsQueue;
@@ -30,6 +33,9 @@ public class RabbitMQConfig {
 
     @Value("${mq.queue.delay}")
     private String delayQueue;
+    
+    @Value("${mq.queue.dead-letter}")
+    private String deadLetterQueue;
 
     @Value("${mq.routing-key.sms}")
     private String smsRoutingKey;
@@ -39,6 +45,9 @@ public class RabbitMQConfig {
 
     @Value("${mq.routing-key.delay}")
     private String delayRoutingKey;
+    
+    @Value("${mq.routing-key.dead-letter}")
+    private String deadLetterRoutingKey;
 
     @Value("${mq.message-ttl}")
     private Integer messageTtl;
@@ -84,6 +93,22 @@ public class RabbitMQConfig {
                 .withArgument("x-message-ttl", messageTtl) // 消息存活时间 15 分钟
                 .build();
     }
+    
+    /**
+     * 死信队列 - 处理重试失败超过 3 次的消息
+     */
+    @Bean
+    public Queue deadLetterQueue() {
+        return QueueBuilder.durable(deadLetterQueue).build();
+    }
+    
+    /**
+     * 死信交换机
+     */
+    @Bean
+    public DirectExchange dlxExchange() {
+        return new DirectExchange(dlxExchange, true, false);
+    }
 
     /**
      * 短信队列绑定到订单交换机
@@ -107,6 +132,14 @@ public class RabbitMQConfig {
     @Bean
     public Binding delayBinding(Queue delayQueue, DirectExchange directExchange) {
         return BindingBuilder.bind(delayQueue).to(directExchange).with(delayRoutingKey);
+    }
+    
+    /**
+     * 死信队列绑定到死信交换机
+     */
+    @Bean
+    public Binding deadLetterBinding(Queue deadLetterQueue, DirectExchange dlxExchange) {
+        return BindingBuilder.bind(deadLetterQueue).to(dlxExchange).with(deadLetterRoutingKey);
     }
 
     /**
